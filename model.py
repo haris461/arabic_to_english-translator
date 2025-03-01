@@ -1,5 +1,5 @@
 import os
-import requests
+import urllib.requests
 
 MODEL_URL = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
 MODEL_PATH = "nmt_model.pkl"
