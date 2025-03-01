@@ -1,82 +1,55 @@
 import streamlit as st
 import torch
-import urllib.request
 import os
+import urllib.request
 from transformers import MarianMTModel, MarianTokenizer
 
-# Define model URL and path
-MODEL_URL = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
-MODEL_PATH = "nmt_model.pkl"
+# Define model URL & path
+MODEL_URL = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pth"
+MODEL_PATH = "nmt_model.pth"
 
-# Function to check and download model if not exists
+# Download model safely
 def download_model():
     if not os.path.exists(MODEL_PATH):
         st.write("📥 Downloading model... Please wait.")
         urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
         st.write("✅ Model downloaded successfully!")
 
-# Download model if not present
+# Remove old model files if corrupted
+if os.path.exists(MODEL_PATH):
+    try:
+        torch.load(MODEL_PATH, map_location="cpu")
+    except:
+        st.warning("⚠️ Corrupted model file detected! Re-downloading...")
+        os.remove(MODEL_PATH)
+
+# Ensure model exists
 download_model()
 
 # Load tokenizer
 MODEL_NAME = "Helsinki-NLP/opus-mt-ar-en"
 tokenizer = MarianTokenizer.from_pretrained(MODEL_NAME)
 
-# Function to load model safely
+# Function to load model correctly
 def load_model():
     try:
-        model = torch.load(MODEL_PATH, map_location=torch.device("cpu"))
+        model = MarianMTModel.from_pretrained(MODEL_NAME)
+        model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
         model.eval()
         return model
     except Exception as e:
-        st.warning(f"⚠️ Model loading failed: {e}")
-        try:
-            model = MarianMTModel.from_pretrained(MODEL_NAME)
-            model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
-            model.eval()
-            return model
-        except Exception as e:
-            st.error(f"❌ Error loading the model: {e}. Re-downloading...")
-            os.remove(MODEL_PATH)
-            download_model()
-            return load_model()
+        st.error(f"❌ Model loading failed: {e}")
+        return None
 
-# Load the model
+# Load Model
 model = load_model()
 
-# Streamlit UI Configuration
-st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍", layout="centered")
+# Streamlit UI
+st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍")
 
-st.markdown("""
-    <style>
-        [data-testid="stAppViewContainer"] {
-            background: linear-gradient(135deg, #000000, #0a0a23);
-            color: white;
-        }
-        .custom-title {
-            color: #32CD32;
-            text-align: center;
-            font-size: 40px;
-            font-weight: bold;
-            text-shadow: 0px 0px 10px rgba(50, 205, 50, 0.8);
-        }
-        .translated-text {
-            background: rgba(50, 205, 50, 0.2);
-            border-left: 5px solid #32CD32;
-            color: white;
-            font-size: 22px;
-            font-weight: bold;
-            padding: 15px;
-            margin-top: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+st.title("🌍 Arabic to English Translator")
 
-st.markdown("<h1 class='custom-title'>🌍 Arabic to English Translator 📝</h1>", unsafe_allow_html=True)
-
-# User Input for Arabic Text
+# User input
 arabic_text = st.text_area("Enter Arabic text:", height=150)
 
 # Translation Function
@@ -88,11 +61,13 @@ def translate(text):
 
 # Translate Button
 if st.button("Translate 🔁"):
-    if arabic_text.strip() == "":
-        st.warning("⚠️ Please enter Arabic text to translate.")
-    else:
+    if arabic_text.strip():
         translated_text = translate(arabic_text)
-        st.markdown(f"<p class='translated-text'><strong>Translated Text:</strong> {translated_text}</p>", unsafe_allow_html=True)
+        st.success(f"**Translated Text:** {translated_text}")
+    else:
+        st.warning("⚠️ Please enter Arabic text.")
 
 # Footer
-st.markdown("<p style='text-align:center; color:#BBBBBB; font-size:14px; margin-top:30px;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
+
+
