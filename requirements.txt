@@ -5,3 +5,4 @@ datasets
 torchvision
 numpy
 pickle5  # (only if using Python < 3.8)
+torchaudio
