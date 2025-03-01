@@ -5,6 +5,4 @@ datasets
 torchvision
 numpy
 pickle5  # (only if using Python < 3.8)
-sentencepiece
-sacremoses
-accelerate>=0.26.0
+requests
