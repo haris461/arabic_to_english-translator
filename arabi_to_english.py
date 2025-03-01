@@ -1,11 +1,11 @@
 import streamlit as st
 import torch
 import os
-import urllib.request
-import asyncio  # Fix for event loop error
+import requests  # Use requests instead of urllib
+import asyncio
 from transformers import MarianMTModel, MarianTokenizer
 
-# Fix Torch event loop issue
+# Fix asyncio event loop issue
 try:
     asyncio.set_event_loop(asyncio.new_event_loop())
 except RuntimeError:
@@ -15,12 +15,20 @@ except RuntimeError:
 MODEL_URL = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pth"
 MODEL_PATH = "nmt_model.pth"
 
-# Download model safely
+# Function to download model safely using requests
 def download_model():
     if not os.path.exists(MODEL_PATH):
         st.write("📥 Downloading model... Please wait.")
-        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
-        st.write("✅ Model downloaded successfully!")
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0'}  # Avoid blocking
+            response = requests.get(MODEL_URL, headers=headers, stream=True)
+            response.raise_for_status()  # Raise error for failed requests
+            with open(MODEL_PATH, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            st.write("✅ Model downloaded successfully!")
+        except requests.exceptions.RequestException as e:
+            st.error(f"❌ Model download failed: {e}")
 
 # Remove old model files if corrupted
 if os.path.exists(MODEL_PATH):
@@ -76,5 +84,3 @@ if st.button("Translate 🔁"):
 
 # Footer
 st.markdown("<p style='text-align:center; color:gray;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
-
-
