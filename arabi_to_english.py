@@ -2,8 +2,15 @@ import streamlit as st
 import torch
 import pickle
 import urllib.request
-from transformers import MarianMTModel, MarianTokenizer
 import os
+import asyncio
+from transformers import MarianMTModel, MarianTokenizer
+
+# Fix asyncio event loop issue in Streamlit
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.run(asyncio.sleep(0))
 
 # Define model URL and path
 model_url = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
@@ -17,7 +24,12 @@ if not os.path.exists(model_path):
 
 # Load the trained model
 with open(model_path, "rb") as f:
-    model = pickle.load(f)
+    try:
+        model = torch.load(f, map_location=torch.device("cpu"))
+    except Exception:
+        model = pickle.load(f)
+
+model.eval()  # Ensure the model is in evaluation mode
 
 # Load tokenizer
 model_name = "Helsinki-NLP/opus-mt-ar-en"
@@ -64,12 +76,15 @@ st.markdown("<h1 class='custom-title'>🌍 LinguaBridge (Arabic to English Trans
 # User Input
 arabic_text = st.text_area("Enter Arabic text:", height=150)
 
-# Translate Function
+# Translation Function
 def translate(text):
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128)
+    
+    # Ensure compatibility with latest transformers
     with torch.no_grad():
         translated_tokens = model.generate(**inputs)
-    return tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
+    
+    return tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
 
 # Translate Button
 if st.button("Translate 🔁"):
@@ -82,4 +97,3 @@ if st.button("Translate 🔁"):
 # Footer
 st.markdown("<p style='text-align:center; color:#BBBBBB; font-size:14px; margin-top:30px;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
 
-    
