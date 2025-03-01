@@ -2,7 +2,6 @@ import streamlit as st
 import torch
 import urllib.request
 from transformers import MarianMTModel, MarianTokenizer
-import os
 
 # Set Streamlit page config
 st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍", layout="centered")
@@ -49,6 +48,20 @@ st.markdown("""
             text-align: center;
             box-shadow: 0px 0px 10px rgba(50, 205, 50, 0.5);
         }
+        div.stButton > button:first-child {
+            background-color: #32CD32 !important;
+            color: white !important;
+            border-radius: 10px !important;
+            font-size: 18px !important;
+            font-weight: bold !important;
+            padding: 10px 20px !important;
+            border: none !important;
+            box-shadow: 0px 0px 10px rgba(50, 205, 50, 0.5);
+        }
+        div.stButton > button:first-child:hover {
+            background-color: #28a745 !important;
+            box-shadow: 0px 0px 15px rgba(40, 167, 69, 0.7);
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -74,4 +87,6 @@ if st.button("Translate 🔁"):
 
 # Footer
 st.markdown("<p style='text-align:center; color:#BBBBBB; font-size:14px; margin-top:30px;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
+
+
 
