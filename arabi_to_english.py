@@ -1,38 +1,23 @@
 import streamlit as st
 import torch
-import pickle
 import urllib.request
 from transformers import MarianMTModel, MarianTokenizer
 import os
 
-# Set Streamlit page config as the first command
+# Set Streamlit page config
 st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍", layout="centered")
 
-# Define model URL and path
-model_url = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
-model_path = "nmt_model.pkl"
-
-# Check if model exists, otherwise download it
-if not os.path.exists(model_path):
-    st.write("Downloading model...")
-    urllib.request.urlretrieve(model_url, model_path)
-    st.write("Download successful!")
-
-# Load the trained model
-try:
-    with open(model_path, "rb") as f:
-        model = pickle.load(f)
-    
-    # Ensure model is of correct type
-    if not isinstance(model, MarianMTModel):
-        raise TypeError("Loaded model is not a valid MarianMTModel.")
-except Exception as e:
-    st.error(f"Error loading model: {e}")
-    st.stop()
-
-# Load tokenizer
+# Define model name
 model_name = "Helsinki-NLP/opus-mt-ar-en"
-tokenizer = MarianTokenizer.from_pretrained(model_name)
+
+# Load tokenizer and model
+@st.cache_resource
+def load_model():
+    tokenizer = MarianTokenizer.from_pretrained(model_name)
+    model = MarianMTModel.from_pretrained(model_name)
+    return tokenizer, model
+
+tokenizer, model = load_model()
 
 # Streamlit App UI
 st.markdown("""
@@ -51,7 +36,6 @@ st.markdown("""
             font-size: 40px;
             font-weight: bold;
             text-shadow: 0px 0px 10px rgba(50, 205, 50, 0.8), 0px 0px 20px rgba(50, 205, 50, 0.6);
-            animation: glow 1.5s infinite alternate;
         }
         .translated-text {
             background: rgba(50, 205, 50, 0.2);
@@ -90,6 +74,4 @@ if st.button("Translate 🔁"):
 
 # Footer
 st.markdown("<p style='text-align:center; color:#BBBBBB; font-size:14px; margin-top:30px;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
-
-
 
