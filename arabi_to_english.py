@@ -1,64 +1,70 @@
 import streamlit as st
+import torch
 import pickle
-import os
-import requests
-import asyncio
+import urllib.request
 from transformers import MarianMTModel, MarianTokenizer
+import os
 
-# Ensure Streamlit config is the first command
-st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍")
+# Define model URL and path
+model_url = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
+model_path = "nmt_model.pkl"
 
-# Fix asyncio event loop issue
-try:
-    asyncio.set_event_loop(asyncio.new_event_loop())
-except RuntimeError:
-    pass
+# Check if model exists, otherwise download it
+if not os.path.exists(model_path):
+    st.write("Downloading model...")
+    urllib.request.urlretrieve(model_url, model_path)
+    st.write("Download successful!")
 
-# Define model URL & path
-MODEL_URL = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
-MODEL_PATH = "nmt_model.pkl"
-
-# Function to download model safely using requests
-def download_model():
-    if not os.path.exists(MODEL_PATH):
-        st.write("📥 Downloading model... Please wait.")
-        try:
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get(MODEL_URL, headers=headers, stream=True)
-            response.raise_for_status()
-            with open(MODEL_PATH, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            st.write("✅ Model downloaded successfully!")
-        except requests.exceptions.RequestException as e:
-            st.error(f"❌ Model download failed: {e}")
-
-# Ensure model exists
-download_model()
+# Load the trained model
+with open(model_path, "rb") as f:
+    model = pickle.load(f)
 
 # Load tokenizer
-MODEL_NAME = "Helsinki-NLP/opus-mt-ar-en"
-tokenizer = MarianTokenizer.from_pretrained(MODEL_NAME)
+model_name = "Helsinki-NLP/opus-mt-ar-en"
+tokenizer = MarianTokenizer.from_pretrained(model_name)
 
-# Function to load model safely from pickle
-def load_model():
-    try:
-        with open(MODEL_PATH, "rb") as f:
-            model = pickle.load(f)
-        return model
-    except Exception as e:
-        st.error(f"❌ Model loading failed: {e}")
-        return None
+# Streamlit App UI
+st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍", layout="centered")
 
-# Load Model
-model = load_model()
+st.markdown("""
+    <style>
+        [data-testid="stAppViewContainer"] {
+            background: linear-gradient(135deg, #000000, #0a0a23);
+            color: white;
+        }
+        [data-testid="stSidebar"] {
+            background: rgba(30, 30, 30, 0.9);
+            color: white;
+        }
+        .custom-title {
+            color: #32CD32 !important;
+            text-align: center;
+            font-size: 40px;
+            font-weight: bold;
+            text-shadow: 0px 0px 10px rgba(50, 205, 50, 0.8), 0px 0px 20px rgba(50, 205, 50, 0.6);
+            animation: glow 1.5s infinite alternate;
+        }
+        .translated-text {
+            background: rgba(50, 205, 50, 0.2);
+            border-left: 5px solid #32CD32;
+            color: white;
+            font-size: 22px;
+            font-weight: bold;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0px 0px 10px rgba(50, 205, 50, 0.5);
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-st.title("🌍 Arabic to English Translator")
+st.markdown("<h1 class='custom-title'>🌍 LinguaBridge (Arabic to English Translator) 📝</h1>", unsafe_allow_html=True)
 
-# User input
+# User Input
 arabic_text = st.text_area("Enter Arabic text:", height=150)
 
-# Translation Function
+# Translate Function
 def translate(text):
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128)
     with torch.no_grad():
@@ -67,10 +73,11 @@ def translate(text):
 
 # Translate Button
 if st.button("Translate 🔁"):
-    if arabic_text.strip():
-        translated_text = translate(arabic_text)
-        st.success(f"**Translated Text:** {translated_text}")
+    if arabic_text.strip() == "":
+        st.warning("⚠️ Please enter Arabic text to translate.")
     else:
-        st.warning("⚠️ Please enter Arabic text.")
+        translated_text = translate(arabic_text)
+        st.markdown(f"<p class='translated-text'><strong>Translated Text:</strong> {translated_text}</p>", unsafe_allow_html=True)
 
-st.markdown("<p style='text-align:center; color:gray;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
+# Footer
+st.markdown("<p style='text-align:center; color:#BBBBBB; font-size:14px; margin-top:30px;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
