@@ -1,6 +1,5 @@
 import streamlit as st
 import torch
-import pickle
 import urllib.request
 import os
 import asyncio
@@ -23,13 +22,12 @@ if not os.path.exists(model_path):
     st.write("Download successful!")
 
 # Load the trained model
-with open(model_path, "rb") as f:
-    try:
-        model = torch.load(f, map_location=torch.device("cpu"))
-    except Exception:
-        model = pickle.load(f)
-
-model.eval()  # Ensure the model is in evaluation mode
+try:
+    model = torch.load(model_path, map_location=torch.device("cpu"))
+    model.eval()  # Ensure the model is in evaluation mode
+except Exception as e:
+    st.error(f"Error loading the model: {e}")
+    st.stop()
 
 # Load tokenizer
 model_name = "Helsinki-NLP/opus-mt-ar-en"
@@ -96,4 +94,3 @@ if st.button("Translate 🔁"):
 
 # Footer
 st.markdown("<p style='text-align:center; color:#BBBBBB; font-size:14px; margin-top:30px;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
-
