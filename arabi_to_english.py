@@ -1,58 +1,50 @@
 import streamlit as st
 import torch
-import pickle
 import urllib.request
 import os
-import asyncio
 from transformers import MarianMTModel, MarianTokenizer
 
 # Define model URL and path
-model_url = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
-model_path = "nmt_model.pkl"
+MODEL_URL = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
+MODEL_PATH = "nmt_model.pkl"
 
-# Function to check and download model
+# Function to check and download model if not exists
 def download_model():
-    if not os.path.exists(model_path):
+    if not os.path.exists(MODEL_PATH):
         st.write("📥 Downloading model... Please wait.")
-        urllib.request.urlretrieve(model_url, model_path)
-        st.write("✅ Download successful!")
+        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+        st.write("✅ Model downloaded successfully!")
 
-# Run download function
+# Download model if not present
 download_model()
 
 # Load tokenizer
-model_name = "Helsinki-NLP/opus-mt-ar-en"
-tokenizer = MarianTokenizer.from_pretrained(model_name)
+MODEL_NAME = "Helsinki-NLP/opus-mt-ar-en"
+tokenizer = MarianTokenizer.from_pretrained(MODEL_NAME)
 
 # Function to load model safely
 def load_model():
     try:
-        # Load the full model with weights_only=False explicitly
-        model = torch.load(model_path, map_location=torch.device("cpu"), weights_only=False)
+        model = torch.load(MODEL_PATH, map_location=torch.device("cpu"))
         model.eval()
         return model
     except Exception as e:
-        st.warning(f"⚠️ Initial model loading failed: {e}")
+        st.warning(f"⚠️ Model loading failed: {e}")
         try:
-            # Load model using state_dict
-            model = MarianMTModel.from_pretrained(model_name)  # Recreate model
-            model.load_state_dict(torch.load(model_path, map_location="cpu", weights_only=False))
+            model = MarianMTModel.from_pretrained(MODEL_NAME)
+            model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
             model.eval()
             return model
         except Exception as e:
             st.error(f"❌ Error loading the model: {e}. Re-downloading...")
-            os.remove(model_path)  # Delete the corrupted file
-            download_model()  # Re-download the model
-            st.warning("🔄 Retrying model loading...")
-            return load_model()  # Retry loading
+            os.remove(MODEL_PATH)
+            download_model()
+            return load_model()
 
-# Load model
+# Load the model
 model = load_model()
 
-# Fix async issues with Streamlit
-asyncio.set_event_loop(asyncio.new_event_loop())
-
-# Streamlit UI
+# Streamlit UI Configuration
 st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍", layout="centered")
 
 st.markdown("""
@@ -61,17 +53,12 @@ st.markdown("""
             background: linear-gradient(135deg, #000000, #0a0a23);
             color: white;
         }
-        [data-testid="stSidebar"] {
-            background: rgba(30, 30, 30, 0.9);
-            color: white;
-        }
         .custom-title {
-            color: #32CD32 !important;
+            color: #32CD32;
             text-align: center;
             font-size: 40px;
             font-weight: bold;
-            text-shadow: 0px 0px 10px rgba(50, 205, 50, 0.8), 0px 0px 20px rgba(50, 205, 50, 0.6);
-            animation: glow 1.5s infinite alternate;
+            text-shadow: 0px 0px 10px rgba(50, 205, 50, 0.8);
         }
         .translated-text {
             background: rgba(50, 205, 50, 0.2);
@@ -83,14 +70,13 @@ st.markdown("""
             margin-top: 20px;
             border-radius: 10px;
             text-align: center;
-            box-shadow: 0px 0px 10px rgba(50, 205, 50, 0.5);
         }
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("<h1 class='custom-title'>🌍 LinguaBridge (Arabic to English Translator) 📝</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='custom-title'>🌍 Arabic to English Translator 📝</h1>", unsafe_allow_html=True)
 
-# User Input
+# User Input for Arabic Text
 arabic_text = st.text_area("Enter Arabic text:", height=150)
 
 # Translation Function
