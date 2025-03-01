@@ -1,15 +1,9 @@
 import streamlit as st
 import torch
+import pickle
 import urllib.request
 import os
-import asyncio
 from transformers import MarianMTModel, MarianTokenizer
-
-# Fix asyncio event loop issue in Streamlit
-try:
-    asyncio.get_running_loop()
-except RuntimeError:
-    asyncio.run(asyncio.sleep(0))
 
 # Define model URL and path
 model_url = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
@@ -17,21 +11,34 @@ model_path = "nmt_model.pkl"
 
 # Check if model exists, otherwise download it
 if not os.path.exists(model_path):
-    st.write("Downloading model...")
+    st.write("Downloading model... Please wait.")
     urllib.request.urlretrieve(model_url, model_path)
     st.write("Download successful!")
-
-# Load the trained model
-try:
-    model = torch.load(model_path, map_location=torch.device("cpu"))
-    model.eval()  # Ensure the model is in evaluation mode
-except Exception as e:
-    st.error(f"Error loading the model: {e}")
-    st.stop()
 
 # Load tokenizer
 model_name = "Helsinki-NLP/opus-mt-ar-en"
 tokenizer = MarianTokenizer.from_pretrained(model_name)
+
+# Function to load model safely
+def load_model():
+    try:
+        # Try loading as full model (old method)
+        model = torch.load(model_path, map_location=torch.device("cpu"), weights_only=False)
+        model.eval()
+        return model
+    except Exception:
+        try:
+            # Load model using state_dict (new method)
+            model = MarianMTModel.from_pretrained(model_name)  # Recreate model
+            model.load_state_dict(torch.load(model_path, map_location="cpu"))
+            model.eval()
+            return model
+        except Exception as e:
+            st.error(f"Error loading the model: {e}")
+            st.stop()
+
+# Load model
+model = load_model()
 
 # Streamlit App UI
 st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍", layout="centered")
@@ -77,12 +84,9 @@ arabic_text = st.text_area("Enter Arabic text:", height=150)
 # Translation Function
 def translate(text):
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128)
-    
-    # Ensure compatibility with latest transformers
     with torch.no_grad():
         translated_tokens = model.generate(**inputs)
-    
-    return tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+    return tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
 
 # Translate Button
 if st.button("Translate 🔁"):
