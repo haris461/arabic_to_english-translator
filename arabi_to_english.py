@@ -1,18 +1,17 @@
 import streamlit as st
 import torch
-import pickle
 import urllib.request
-from transformers import MarianMTModel, MarianTokenizer
 import os
+from transformers import MarianMTModel, MarianTokenizer
 
-# Set Streamlit page config as the first command
+# Set Streamlit page config
 st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍", layout="centered")
 
 # Define model URL and path
 model_url = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
 model_path = "nmt_model.pkl"
 
-# Check if model exists, otherwise download it
+# Download model if not exists
 if not os.path.exists(model_path):
     st.write("Downloading model...")
     urllib.request.urlretrieve(model_url, model_path)
@@ -20,19 +19,15 @@ if not os.path.exists(model_path):
 
 # Load the trained model
 try:
-    with open(model_path, "rb") as f:
-        model = pickle.load(f)
-    
-    # Ensure model is of correct type
-    if not isinstance(model, MarianMTModel):
-        raise TypeError("Loaded model is not a valid MarianMTModel.")
+    model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
+    model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
+    model.eval()
 except Exception as e:
     st.error(f"Error loading model: {e}")
     st.stop()
 
 # Load tokenizer
-model_name = "Helsinki-NLP/opus-mt-ar-en"
-tokenizer = MarianTokenizer.from_pretrained(model_name)
+tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-ar-en")
 
 # Streamlit App UI
 st.markdown("""
@@ -88,6 +83,4 @@ if st.button("Translate 🔁"):
         translated_text = translate(arabic_text)
         st.markdown(f"<p class='translated-text'><strong>Translated Text:</strong> {translated_text}</p>", unsafe_allow_html=True)
 
-# Footer
-st.markdown("<p style='text-align:center; color:#BBBBBB; font-size:14px; margin-top:30px;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
 
