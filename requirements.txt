@@ -1,4 +1,5 @@
 streamlit
+pickle
 torch
 transformers
 datasets
