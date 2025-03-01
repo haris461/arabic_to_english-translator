@@ -3,17 +3,22 @@ import torch
 import pickle
 import urllib.request
 import os
+import asyncio
 from transformers import MarianMTModel, MarianTokenizer
 
 # Define model URL and path
 model_url = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
 model_path = "nmt_model.pkl"
 
-# Check if model exists, otherwise download it
-if not os.path.exists(model_path):
-    st.write("Downloading model... Please wait.")
-    urllib.request.urlretrieve(model_url, model_path)
-    st.write("Download successful!")
+# Function to check and download model
+def download_model():
+    if not os.path.exists(model_path):
+        st.write("📥 Downloading model... Please wait.")
+        urllib.request.urlretrieve(model_url, model_path)
+        st.write("✅ Download successful!")
+
+# Run download function
+download_model()
 
 # Load tokenizer
 model_name = "Helsinki-NLP/opus-mt-ar-en"
@@ -22,25 +27,32 @@ tokenizer = MarianTokenizer.from_pretrained(model_name)
 # Function to load model safely
 def load_model():
     try:
-        # Try loading as full model (old method)
+        # Load the full model with weights_only=False explicitly
         model = torch.load(model_path, map_location=torch.device("cpu"), weights_only=False)
         model.eval()
         return model
-    except Exception:
+    except Exception as e:
+        st.warning(f"⚠️ Initial model loading failed: {e}")
         try:
-            # Load model using state_dict (new method)
+            # Load model using state_dict
             model = MarianMTModel.from_pretrained(model_name)  # Recreate model
-            model.load_state_dict(torch.load(model_path, map_location="cpu"))
+            model.load_state_dict(torch.load(model_path, map_location="cpu", weights_only=False))
             model.eval()
             return model
         except Exception as e:
-            st.error(f"Error loading the model: {e}")
-            st.stop()
+            st.error(f"❌ Error loading the model: {e}. Re-downloading...")
+            os.remove(model_path)  # Delete the corrupted file
+            download_model()  # Re-download the model
+            st.warning("🔄 Retrying model loading...")
+            return load_model()  # Retry loading
 
 # Load model
 model = load_model()
 
-# Streamlit App UI
+# Fix async issues with Streamlit
+asyncio.set_event_loop(asyncio.new_event_loop())
+
+# Streamlit UI
 st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍", layout="centered")
 
 st.markdown("""
