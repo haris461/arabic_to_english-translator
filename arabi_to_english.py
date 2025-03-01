@@ -12,8 +12,8 @@ except RuntimeError:
     pass
 
 # Define model URL & path
-MODEL_URL = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pth"
-MODEL_PATH = "nmt_model.pth"
+MODEL_URL = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pkl"
+MODEL_PATH = "nmt_model.pkl"
 
 # Function to download model safely using requests
 def download_model():
