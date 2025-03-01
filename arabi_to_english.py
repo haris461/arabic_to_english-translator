@@ -2,44 +2,40 @@ import streamlit as st
 import torch
 import os
 import urllib.request
+import asyncio  # Fix for event loop error
 from transformers import MarianMTModel, MarianTokenizer
+
+# Fix Torch event loop issue
+try:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+except RuntimeError:
+    pass
 
 # Define model URL & path
 MODEL_URL = "https://github.com/haris461/arabic_to_english-translator/releases/download/4.46.3/nmt_model.pth"
 MODEL_PATH = "nmt_model.pth"
-MODEL_NAME = "Helsinki-NLP/opus-mt-ar-en"
 
-# Function to download model safely
+# Download model safely
 def download_model():
     if not os.path.exists(MODEL_PATH):
         st.write("📥 Downloading model... Please wait.")
-        try:
-            urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
-            st.write("✅ Model downloaded successfully!")
-        except Exception as e:
-            st.error(f"❌ Model download failed: {e}")
-            return False
-    return True
+        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+        st.write("✅ Model downloaded successfully!")
 
-# Check for corrupted model file
+# Remove old model files if corrupted
 if os.path.exists(MODEL_PATH):
     try:
         torch.load(MODEL_PATH, map_location="cpu")
-    except Exception:
+    except:
         st.warning("⚠️ Corrupted model file detected! Re-downloading...")
         os.remove(MODEL_PATH)
-        download_model()
 
-# Ensure model exists before proceeding
-if not download_model():
-    st.stop()
+# Ensure model exists
+download_model()
 
 # Load tokenizer
-try:
-    tokenizer = MarianTokenizer.from_pretrained(MODEL_NAME)
-except Exception as e:
-    st.error(f"❌ Failed to load tokenizer: {e}")
-    st.stop()
+MODEL_NAME = "Helsinki-NLP/opus-mt-ar-en"
+tokenizer = MarianTokenizer.from_pretrained(MODEL_NAME)
 
 # Function to load model correctly
 def load_model():
@@ -54,11 +50,10 @@ def load_model():
 
 # Load Model
 model = load_model()
-if not model:
-    st.stop()
 
 # Streamlit UI
 st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍")
+
 st.title("🌍 Arabic to English Translator")
 
 # User input
@@ -81,3 +76,5 @@ if st.button("Translate 🔁"):
 
 # Footer
 st.markdown("<p style='text-align:center; color:gray;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
+
+
