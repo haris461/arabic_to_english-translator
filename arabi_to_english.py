@@ -1,9 +1,12 @@
 import streamlit as st
-import torch
+import pickle
 import os
-import requests  # Use requests instead of urllib
+import requests
 import asyncio
 from transformers import MarianMTModel, MarianTokenizer
+
+# Ensure Streamlit config is the first command
+st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍")
 
 # Fix asyncio event loop issue
 try:
@@ -20,23 +23,15 @@ def download_model():
     if not os.path.exists(MODEL_PATH):
         st.write("📥 Downloading model... Please wait.")
         try:
-            headers = {'User-Agent': 'Mozilla/5.0'}  # Avoid blocking
+            headers = {'User-Agent': 'Mozilla/5.0'}
             response = requests.get(MODEL_URL, headers=headers, stream=True)
-            response.raise_for_status()  # Raise error for failed requests
+            response.raise_for_status()
             with open(MODEL_PATH, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
             st.write("✅ Model downloaded successfully!")
         except requests.exceptions.RequestException as e:
             st.error(f"❌ Model download failed: {e}")
-
-# Remove old model files if corrupted
-if os.path.exists(MODEL_PATH):
-    try:
-        torch.load(MODEL_PATH, map_location="cpu")
-    except:
-        st.warning("⚠️ Corrupted model file detected! Re-downloading...")
-        os.remove(MODEL_PATH)
 
 # Ensure model exists
 download_model()
@@ -45,12 +40,11 @@ download_model()
 MODEL_NAME = "Helsinki-NLP/opus-mt-ar-en"
 tokenizer = MarianTokenizer.from_pretrained(MODEL_NAME)
 
-# Function to load model correctly
+# Function to load model safely from pickle
 def load_model():
     try:
-        model = MarianMTModel.from_pretrained(MODEL_NAME)
-        model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
-        model.eval()
+        with open(MODEL_PATH, "rb") as f:
+            model = pickle.load(f)
         return model
     except Exception as e:
         st.error(f"❌ Model loading failed: {e}")
@@ -58,9 +52,6 @@ def load_model():
 
 # Load Model
 model = load_model()
-
-# Streamlit UI
-st.set_page_config(page_title="Arabic-English Translator", page_icon="🌍")
 
 st.title("🌍 Arabic to English Translator")
 
@@ -82,5 +73,4 @@ if st.button("Translate 🔁"):
     else:
         st.warning("⚠️ Please enter Arabic text.")
 
-# Footer
 st.markdown("<p style='text-align:center; color:gray;'>Developed with ❤️ using Streamlit</p>", unsafe_allow_html=True)
